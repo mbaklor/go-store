@@ -1,17 +1,14 @@
 package store
 
-import (
-	"github.com/google/uuid"
-)
-
 type Writable[T any] struct {
+	subCount    int
 	value       T
-	subscribers map[string]func(T)
+	subscribers map[int]func(T)
 }
 
 func NewWritable[T any](value T) Writable[T] {
-	subscribers := make(map[string]func(T))
-	return Writable[T]{value, subscribers}
+	subscribers := make(map[int]func(T))
+	return Writable[T]{0, value, subscribers}
 }
 
 func (w *Writable[T]) Set(v T) {
@@ -26,7 +23,8 @@ func (w *Writable[T]) Update(updater func(T) T) {
 }
 
 func (w *Writable[T]) Subscribe(subscriber func(T)) (unsubscriber func()) {
-	id := uuid.New().String()
+	id := w.subCount
+	w.subCount++
 	w.subscribers[id] = subscriber
 	return func() {
 		delete(w.subscribers, id)
