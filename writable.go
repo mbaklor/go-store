@@ -1,5 +1,9 @@
 package store
 
+import (
+	"reflect"
+)
+
 type Writable[T any] struct {
 	subCount    int
 	value       T
@@ -12,6 +16,9 @@ func NewWritable[T any](value T) Writable[T] {
 }
 
 func (w *Writable[T]) Set(v T) {
+	if eqIgnorePtr(v, w.value) {
+		return
+	}
 	w.value = v
 	for _, fn := range w.subscribers {
 		fn(v)
@@ -29,4 +36,18 @@ func (w *Writable[T]) Subscribe(subscriber func(T)) (unsubscriber func()) {
 	return func() {
 		delete(w.subscribers, id)
 	}
+}
+
+// Check equality of a and b
+//
+// always return true if T is a pointer
+// because Update in a pointer struct will mutate the original struct
+func eqIgnorePtr[T any](a, b T) bool {
+	if reflect.ValueOf(a).Kind() == reflect.Pointer {
+		return false
+	}
+	if reflect.DeepEqual(a, b) {
+		return true
+	}
+	return false
 }
