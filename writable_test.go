@@ -1,6 +1,7 @@
 package store
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -136,4 +137,34 @@ func TestWritablePointer(t *testing.T) {
 	assert.Equal(t, 4, val)
 	assert.Equal(t, 12, sum)
 	assert.Equal(t, "sub second", word)
+}
+
+func TestWritableAsync(t *testing.T) {
+	type testStruct struct {
+		value int
+	}
+	ts := new(testStruct)
+	s := NewWritable(ts)
+	val := 0
+	unsub := s.Subscribe(func(ts *testStruct) {
+		val = ts.value
+	})
+	defer unsub()
+
+	wg := sync.WaitGroup{}
+	wg.Add(100)
+	asyncUpdate := func(i int) {
+		s.Update(func(ts *testStruct) *testStruct {
+			ts.value += i
+			wg.Done()
+			return ts
+		})
+	}
+
+	for i := 0; i < 100; i++ {
+		go asyncUpdate(i)
+	}
+
+	wg.Wait()
+	assert.Equal(t, 4950, val)
 }

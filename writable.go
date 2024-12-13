@@ -2,39 +2,60 @@ package store
 
 import (
 	"reflect"
+	"sync"
 )
 
 type Writable[T any] struct {
+	lock        *sync.RWMutex
 	subCount    int
 	value       T
 	subscribers map[int]func(T)
 }
 
 func NewWritable[T any](value T) Writable[T] {
+	lock := new(sync.RWMutex)
 	subscribers := make(map[int]func(T))
-	return Writable[T]{0, value, subscribers}
+	return Writable[T]{
+		lock:        lock,
+		value:       value,
+		subscribers: subscribers,
+	}
 }
 
 func (w *Writable[T]) Set(v T) {
+	w.lock.RLock()
 	if eqIgnorePtr(v, w.value) {
+		w.lock.RUnlock()
 		return
 	}
+	w.lock.RUnlock()
+	w.lock.Lock()
 	w.value = v
+	w.lock.Unlock()
+	w.lock.RLock()
 	for _, fn := range w.subscribers {
 		fn(v)
 	}
+	w.lock.RUnlock()
 }
 
 func (w *Writable[T]) Update(updater func(T) T) {
-	w.Set(updater(w.value))
+	w.lock.Lock()
+	newval := updater(w.value)
+	w.lock.Unlock()
+	w.Set(newval)
 }
 
 func (w *Writable[T]) Subscribe(subscriber func(T)) (unsubscriber func()) {
+	w.lock.Lock()
 	id := w.subCount
 	w.subCount++
 	w.subscribers[id] = subscriber
+	w.lock.Unlock()
 	return func() {
+		w.lock.Lock()
 		delete(w.subscribers, id)
+		w.lock.Unlock()
 	}
 }
 
