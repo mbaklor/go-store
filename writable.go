@@ -7,7 +7,7 @@ import (
 
 type Writable[T any] struct {
 	lock        sync.RWMutex
-	subCount    int
+	subID       int
 	value       T
 	subscribers map[int]func(T)
 }
@@ -47,8 +47,8 @@ func (w *Writable[T]) Update(updater func(T) T) {
 
 func (w *Writable[T]) Subscribe(subscriber func(T)) (unsubscriber func()) {
 	w.lock.Lock()
-	id := w.subCount
-	w.subCount++
+	id := w.subID
+	w.subID++
 	w.subscribers[id] = subscriber
 	w.lock.Unlock()
 	return func() {
