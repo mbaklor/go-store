@@ -6,17 +6,16 @@ import (
 )
 
 type Writable[T any] struct {
-	lock        *sync.RWMutex
+	lock        sync.RWMutex
 	subCount    int
 	value       T
 	subscribers map[int]func(T)
 }
 
-func NewWritable[T any](value T) Writable[T] {
-	lock := new(sync.RWMutex)
+func NewWritable[T any](value T) *Writable[T] {
 	subscribers := make(map[int]func(T))
-	return Writable[T]{
-		lock:        lock,
+	return &Writable[T]{
+		lock:        sync.RWMutex{},
 		value:       value,
 		subscribers: subscribers,
 	}
