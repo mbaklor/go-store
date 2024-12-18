@@ -164,6 +164,7 @@ func TestWritablePointer(t *testing.T) {
 }
 
 func TestWritableAsync(t *testing.T) {
+	lock := sync.RWMutex{}
 	wg := sync.WaitGroup{}
 	type testStruct struct {
 		value int
@@ -172,7 +173,9 @@ func TestWritableAsync(t *testing.T) {
 	s := NewWritable(ts)
 	val := 0
 	unsub := s.Subscribe(func(ts *testStruct) {
+		lock.RLock()
 		val = ts.value
+		lock.RUnlock()
 		wg.Done()
 	})
 	defer unsub()
@@ -180,7 +183,9 @@ func TestWritableAsync(t *testing.T) {
 	wg.Add(100)
 	asyncUpdate := func(i int) {
 		s.Update(func(ts *testStruct) *testStruct {
+			lock.Lock()
 			ts.value += i
+			lock.Unlock()
 			return ts
 		})
 	}
