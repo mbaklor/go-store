@@ -2,7 +2,6 @@ package store
 
 import (
 	"reflect"
-	"sync"
 )
 
 type subscriberCommand int
@@ -20,25 +19,43 @@ type subUpdater[T any] struct {
 	value    T
 }
 
+type valueCommand int
+
+const (
+	valGet valueCommand = iota
+	valSet
+)
+
 type Writable[T any] struct {
-	lock        sync.RWMutex
 	subID       int
 	value       T
 	subscribers map[int]func(T)
 	subCh       chan subUpdater[T]
+	getVal      chan struct{}
+	setVal      chan T
+	retVal      chan T
 }
 
 func (w *Writable[T]) subController() {
-	for s := range w.subCh {
-		switch s.command {
-		case subAdd:
-			w.subscribers[s.id] = s.callback
-		case subRemove:
-			delete(w.subscribers, s.id)
-		case subCallback:
-			for _, fn := range w.subscribers {
-				fn(s.value)
+	for {
+		select {
+		case s := <-w.subCh:
+			// for s := range w.subCh {
+			switch s.command {
+			case subAdd:
+				w.subscribers[s.id] = s.callback
+			case subRemove:
+				delete(w.subscribers, s.id)
+			case subCallback:
+				for _, fn := range w.subscribers {
+					fn(s.value)
+				}
+				// }
 			}
+		case v := <-w.setVal:
+			w.value = v
+		case <-w.getVal:
+			w.retVal <- w.value
 		}
 	}
 }
@@ -46,23 +63,28 @@ func (w *Writable[T]) subController() {
 func NewWritable[T any](value T) *Writable[T] {
 	subscribers := make(map[int]func(T))
 	subCh := make(chan subUpdater[T])
+	get := make(chan struct{})
+	set := make(chan T)
+	ret := make(chan T)
 	w := &Writable[T]{
-		lock:        sync.RWMutex{},
 		value:       value,
 		subscribers: subscribers,
 		subCh:       subCh,
+		getVal:      get,
+		setVal:      set,
+		retVal:      ret,
 	}
 	go w.subController()
 	return w
 }
 
 func (w *Writable[T]) Set(v T) {
-	w.lock.Lock()
-	defer w.lock.Unlock()
-	if eqIgnorePtr(v, w.value) {
+	w.getVal <- struct{}{}
+	val := <-w.retVal
+	if eqIgnorePtr(v, val) {
 		return
 	}
-	w.value = v
+	w.setVal <- v
 
 	w.subCh <- subUpdater[T]{
 		command: subCallback,
@@ -71,17 +93,23 @@ func (w *Writable[T]) Set(v T) {
 }
 
 func (w *Writable[T]) Update(updater func(T) T) {
-	w.lock.Lock()
-	newval := updater(w.value)
-	w.lock.Unlock()
-	w.Set(newval)
+	w.getVal <- struct{}{}
+	val := <-w.retVal
+	v := updater(val)
+	if eqIgnorePtr(v, val) {
+		return
+	}
+	w.setVal <- v
+
+	w.subCh <- subUpdater[T]{
+		command: subCallback,
+		value:   v,
+	}
 }
 
 func (w *Writable[T]) Subscribe(subscriber func(T)) (unsubscriber func()) {
-	w.lock.Lock()
 	id := w.subID
 	w.subID++
-	w.lock.Unlock()
 	w.subCh <- subUpdater[T]{
 		command:  subAdd,
 		id:       id,
