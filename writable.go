@@ -63,6 +63,8 @@ func (w *Writable[T]) Set(v T) {
 		return
 	}
 	w.value = v
+	r := reflect.ValueOf(v)
+	v = r.Interface().(T)
 
 	w.subCh <- subUpdater[T]{
 		command: subCallback,
@@ -71,10 +73,7 @@ func (w *Writable[T]) Set(v T) {
 }
 
 func (w *Writable[T]) Update(updater func(T) T) {
-	w.lock.Lock()
-	newval := updater(w.value)
-	w.lock.Unlock()
-	w.Set(newval)
+	w.Set(updater(w.get()))
 }
 
 func (w *Writable[T]) Subscribe(subscriber func(T)) (unsubscriber func()) {
@@ -93,6 +92,20 @@ func (w *Writable[T]) Subscribe(subscriber func(T)) (unsubscriber func()) {
 			id:      id,
 		}
 	}
+}
+
+func (w *Writable[T]) get() T {
+	w.lock.RLock()
+	defer w.lock.RUnlock()
+	r := reflect.ValueOf(w.value)
+	if r.Kind() != reflect.Pointer {
+		return w.value
+	}
+	e := r.Elem()
+	t := reflect.New(e.Type())
+	te := t.Elem()
+	te.Set(e)
+	return t.Interface().(T)
 }
 
 // Check equality of a and b
