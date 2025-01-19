@@ -14,6 +14,7 @@ func TestSubscriptions(t *testing.T) {
 	unsub := s.Subscribe(func(i int) {
 		sum += i
 	})
+	assert.Equal(t, 0, sum)
 
 	s.Set(2)
 	s.Wait()
@@ -27,36 +28,39 @@ func TestSubscriptions(t *testing.T) {
 	unsub = s.Subscribe(func(i int) {
 		sum += i
 	})
+	assert.Equal(t, 4, sum)
 
 	s.Set(2)
 	s.Wait()
-	assert.Equal(t, 4, sum)
+	assert.Equal(t, 6, sum)
 
 	unsub()
 	s.Set(2)
 	s.Wait()
-	assert.Equal(t, 4, sum)
+	assert.Equal(t, 6, sum)
 
 	unsub1 := s.Subscribe(func(i int) {
 		sum += i
 	})
+	assert.Equal(t, 8, sum)
 	unsub2 := s.Subscribe(func(i int) {
 		sum += i
 	})
+	assert.Equal(t, 10, sum)
 
 	s.Set(2)
 	s.Wait()
-	assert.Equal(t, 8, sum)
+	assert.Equal(t, 14, sum)
 
 	unsub1()
 	s.Set(2)
 	s.Wait()
-	assert.Equal(t, 10, sum)
+	assert.Equal(t, 16, sum)
 
 	unsub2()
 	s.Set(2)
 	s.Wait()
-	assert.Equal(t, 10, sum)
+	assert.Equal(t, 16, sum)
 }
 
 func TestWritableInt(t *testing.T) {
@@ -210,6 +214,7 @@ func TestWritableAsync(t *testing.T) {
 	ts := new(testStruct)
 	s := NewWritable(ts)
 	val := 0
+	wg.Add(1)
 	unsub := s.Subscribe(func(ts *testStruct) {
 		lock.RLock()
 		val = ts.value

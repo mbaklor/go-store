@@ -99,6 +99,9 @@ func (w *Writable[T]) Subscribe(subscriber func(T)) (unsubscriber func()) {
 		id:       id,
 		callback: subscriber,
 	}
+	w.lock.RLock()
+	subscriber(w.value)
+	w.lock.RUnlock()
 	return func() {
 		w.wg.Add(1)
 		w.subCh <- subUpdater[T]{
