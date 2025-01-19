@@ -1,7 +1,6 @@
 package store
 
 import (
-	"reflect"
 	"sync"
 )
 
@@ -59,9 +58,6 @@ func NewWritable[T any](value T) *Writable[T] {
 func (w *Writable[T]) Set(v T) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
-	if eqIgnorePtr(v, w.value) {
-		return
-	}
 	w.value = v
 
 	w.subCh <- subUpdater[T]{
@@ -93,18 +89,4 @@ func (w *Writable[T]) Subscribe(subscriber func(T)) (unsubscriber func()) {
 			id:      id,
 		}
 	}
-}
-
-// Check equality of a and b
-//
-// always return true if T is a pointer
-// because Update in a pointer struct will mutate the original struct
-func eqIgnorePtr[T any](a, b T) bool {
-	if reflect.ValueOf(a).Kind() == reflect.Pointer {
-		return false
-	}
-	if reflect.DeepEqual(a, b) {
-		return true
-	}
-	return false
 }

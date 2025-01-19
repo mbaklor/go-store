@@ -64,13 +64,15 @@ func TestWritableStruct(t *testing.T) {
 	assert.Equal(t, 2, sum)
 	assert.Equal(t, "sub first", word)
 
+	wg.Add(1)
 	s.Update(func(ts testStruct) testStruct {
 		ts.value = 2
 		ts.word = "first"
 		return ts
 	})
+	wg.Wait()
 	assert.Equal(t, 2, val)
-	assert.Equal(t, 2, sum)
+	assert.Equal(t, 4, sum)
 	assert.Equal(t, "sub first", word)
 
 	wg.Add(1)
@@ -80,7 +82,7 @@ func TestWritableStruct(t *testing.T) {
 	})
 	wg.Wait()
 	assert.Equal(t, 4, val)
-	assert.Equal(t, 6, sum)
+	assert.Equal(t, 8, sum)
 	assert.Equal(t, "sub first", word)
 
 	wg.Add(1)
@@ -90,13 +92,13 @@ func TestWritableStruct(t *testing.T) {
 	})
 	wg.Wait()
 	assert.Equal(t, 4, val)
-	assert.Equal(t, 10, sum)
+	assert.Equal(t, 12, sum)
 	assert.Equal(t, "sub second", word)
 
 	unsub()
 	s.Set(testStruct{10, "third"})
 	assert.Equal(t, 4, val)
-	assert.Equal(t, 10, sum)
+	assert.Equal(t, 12, sum)
 	assert.Equal(t, "sub second", word)
 }
 
