@@ -25,6 +25,7 @@ type Writable[T any] struct {
 	value       T
 	subscribers map[int]func(T)
 	subCh       chan subUpdater[T]
+	wg          sync.WaitGroup
 }
 
 func (w *Writable[T]) subController() {
@@ -38,6 +39,7 @@ func (w *Writable[T]) subController() {
 			for _, fn := range w.subscribers {
 				fn(s.value)
 			}
+			w.wg.Done()
 		}
 	}
 }
@@ -50,6 +52,7 @@ func NewWritable[T any](value T) *Writable[T] {
 		value:       value,
 		subscribers: subscribers,
 		subCh:       subCh,
+		wg:          sync.WaitGroup{},
 	}
 	go w.subController()
 	return w
@@ -60,6 +63,7 @@ func (w *Writable[T]) Set(v T) {
 	defer w.lock.Unlock()
 	w.value = v
 
+	w.wg.Add(1)
 	w.subCh <- subUpdater[T]{
 		command: subCallback,
 		value:   v,
@@ -89,4 +93,8 @@ func (w *Writable[T]) Subscribe(subscriber func(T)) (unsubscriber func()) {
 			id:      id,
 		}
 	}
+}
+
+func (w *Writable[T]) Wait() {
+	w.wg.Wait()
 }

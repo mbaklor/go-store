@@ -8,7 +8,6 @@ import (
 )
 
 func TestWritableInt(t *testing.T) {
-	wg := sync.WaitGroup{}
 	s := NewWritable(0)
 	val := 0
 	sum := 0
@@ -16,20 +15,17 @@ func TestWritableInt(t *testing.T) {
 	unsub := s.Subscribe(func(i int) {
 		val = i
 		sum += i
-		wg.Done()
 	})
 
-	wg.Add(1)
 	s.Set(2)
-	wg.Wait()
+	s.Wait()
 	assert.Equal(t, 2, val)
 	assert.Equal(t, 2, sum)
 
-	wg.Add(1)
 	s.Update(func(i int) int {
 		return i * 2
 	})
-	wg.Wait()
+	s.Wait()
 	assert.Equal(t, 4, val)
 	assert.Equal(t, 6, sum)
 
@@ -40,7 +36,6 @@ func TestWritableInt(t *testing.T) {
 }
 
 func TestWritableStruct(t *testing.T) {
-	wg := sync.WaitGroup{}
 	type testStruct struct {
 		value int
 		word  string
@@ -54,43 +49,38 @@ func TestWritableStruct(t *testing.T) {
 		val = ts.value
 		sum += ts.value
 		word = "sub " + ts.word
-		wg.Done()
 	})
 
-	wg.Add(1)
 	s.Set(testStruct{2, "first"})
-	wg.Wait()
+	s.Wait()
 	assert.Equal(t, 2, val)
 	assert.Equal(t, 2, sum)
 	assert.Equal(t, "sub first", word)
 
-	wg.Add(1)
 	s.Update(func(ts testStruct) testStruct {
 		ts.value = 2
 		ts.word = "first"
 		return ts
 	})
-	wg.Wait()
+	s.Wait()
 	assert.Equal(t, 2, val)
 	assert.Equal(t, 4, sum)
 	assert.Equal(t, "sub first", word)
 
-	wg.Add(1)
 	s.Update(func(ts testStruct) testStruct {
 		ts.value = 4
 		return ts
 	})
-	wg.Wait()
+	s.Wait()
 	assert.Equal(t, 4, val)
 	assert.Equal(t, 8, sum)
 	assert.Equal(t, "sub first", word)
 
-	wg.Add(1)
 	s.Update(func(ts testStruct) testStruct {
 		ts.word = "second"
 		return ts
 	})
-	wg.Wait()
+	s.Wait()
 	assert.Equal(t, 4, val)
 	assert.Equal(t, 12, sum)
 	assert.Equal(t, "sub second", word)
@@ -103,7 +93,6 @@ func TestWritableStruct(t *testing.T) {
 }
 
 func TestWritablePointer(t *testing.T) {
-	wg := sync.WaitGroup{}
 	type testStruct struct {
 		value int
 		word  string
@@ -117,43 +106,38 @@ func TestWritablePointer(t *testing.T) {
 		val = ts.value
 		sum += ts.value
 		word = "sub " + ts.word
-		wg.Done()
 	})
 
-	wg.Add(1)
 	s.Set(&testStruct{2, "first"})
-	wg.Wait()
+	s.Wait()
 	assert.Equal(t, 2, val)
 	assert.Equal(t, 2, sum)
 	assert.Equal(t, "sub first", word)
 
-	wg.Add(1)
 	s.Update(func(ts *testStruct) *testStruct {
 		ts.value = 2
 		ts.word = "first"
 		return ts
 	})
-	wg.Wait()
+	s.Wait()
 	assert.Equal(t, 2, val)
 	assert.Equal(t, 4, sum)
 	assert.Equal(t, "sub first", word)
 
-	wg.Add(1)
 	s.Update(func(ts *testStruct) *testStruct {
 		ts.value = 4
 		return ts
 	})
-	wg.Wait()
+	s.Wait()
 	assert.Equal(t, 4, val)
 	assert.Equal(t, 8, sum)
 	assert.Equal(t, "sub first", word)
 
-	wg.Add(1)
 	s.Update(func(ts *testStruct) *testStruct {
 		ts.word = "second"
 		return ts
 	})
-	wg.Wait()
+	s.Wait()
 	assert.Equal(t, 4, val)
 	assert.Equal(t, 12, sum)
 	assert.Equal(t, "sub second", word)
