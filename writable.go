@@ -26,6 +26,7 @@ type Writable[T any] struct {
 	subscribers map[int]func(T)
 	subCh       chan subUpdater[T]
 	wg          sync.WaitGroup
+	running     bool
 }
 
 func (w *Writable[T]) subController() {
@@ -35,6 +36,12 @@ func (w *Writable[T]) subController() {
 			w.subscribers[s.id] = s.callback
 		case subRemove:
 			delete(w.subscribers, s.id)
+			if len(w.subscribers) == 0 {
+				w.running = false
+				w.wg.Done()
+				return
+			}
+			w.wg.Done()
 		case subCallback:
 			for _, fn := range w.subscribers {
 				fn(s.value)
@@ -54,7 +61,6 @@ func NewWritable[T any](value T) *Writable[T] {
 		subCh:       subCh,
 		wg:          sync.WaitGroup{},
 	}
-	go w.subController()
 	return w
 }
 
@@ -63,10 +69,12 @@ func (w *Writable[T]) Set(v T) {
 	defer w.lock.Unlock()
 	w.value = v
 
-	w.wg.Add(1)
-	w.subCh <- subUpdater[T]{
-		command: subCallback,
-		value:   v,
+	if w.running {
+		w.wg.Add(1)
+		w.subCh <- subUpdater[T]{
+			command: subCallback,
+			value:   v,
+		}
 	}
 }
 
@@ -82,19 +90,27 @@ func (w *Writable[T]) Subscribe(subscriber func(T)) (unsubscriber func()) {
 	id := w.subID
 	w.subID++
 	w.lock.Unlock()
+	if !w.running {
+		go w.subController()
+		w.running = true
+	}
 	w.subCh <- subUpdater[T]{
 		command:  subAdd,
 		id:       id,
 		callback: subscriber,
 	}
 	return func() {
+		w.wg.Add(1)
 		w.subCh <- subUpdater[T]{
 			command: subRemove,
 			id:      id,
 		}
+		w.wg.Wait()
 	}
 }
 
 func (w *Writable[T]) Wait() {
-	w.wg.Wait()
+	if w.running {
+		w.wg.Wait()
+	}
 }

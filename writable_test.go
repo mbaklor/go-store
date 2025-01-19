@@ -7,6 +7,58 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestSubscriptions(t *testing.T) {
+	s := NewWritable(0)
+	sum := 0
+
+	unsub := s.Subscribe(func(i int) {
+		sum += i
+	})
+
+	s.Set(2)
+	s.Wait()
+	assert.Equal(t, 2, sum)
+
+	unsub()
+	s.Set(2)
+	s.Wait()
+	assert.Equal(t, 2, sum)
+
+	unsub = s.Subscribe(func(i int) {
+		sum += i
+	})
+
+	s.Set(2)
+	s.Wait()
+	assert.Equal(t, 4, sum)
+
+	unsub()
+	s.Set(2)
+	s.Wait()
+	assert.Equal(t, 4, sum)
+
+	unsub1 := s.Subscribe(func(i int) {
+		sum += i
+	})
+	unsub2 := s.Subscribe(func(i int) {
+		sum += i
+	})
+
+	s.Set(2)
+	s.Wait()
+	assert.Equal(t, 8, sum)
+
+	unsub1()
+	s.Set(2)
+	s.Wait()
+	assert.Equal(t, 10, sum)
+
+	unsub2()
+	s.Set(2)
+	s.Wait()
+	assert.Equal(t, 10, sum)
+}
+
 func TestWritableInt(t *testing.T) {
 	s := NewWritable(0)
 	val := 0
