@@ -1,14 +1,15 @@
-package store
+package store_test
 
 import (
 	"sync"
 	"testing"
 
+	"github.com/mbaklor/go-store"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSubscriptions(t *testing.T) {
-	s := NewWritable(0)
+	s := store.NewWritable(0)
 	sum := 0
 
 	unsub := s.Subscribe(func(i int) {
@@ -64,7 +65,7 @@ func TestSubscriptions(t *testing.T) {
 }
 
 func TestWritableInt(t *testing.T) {
-	s := NewWritable(0)
+	s := store.NewWritable(0)
 	val := 0
 	sum := 0
 
@@ -96,7 +97,7 @@ func TestWritableStruct(t *testing.T) {
 		value int
 		word  string
 	}
-	s := NewWritable(testStruct{0, "test"})
+	s := store.NewWritable(testStruct{0, "test"})
 	val := 0
 	sum := 0
 	word := ""
@@ -153,7 +154,7 @@ func TestWritablePointer(t *testing.T) {
 		value int
 		word  string
 	}
-	s := NewWritable(new(testStruct))
+	s := store.NewWritable(new(testStruct))
 	val := 0
 	sum := 0
 	word := ""
@@ -212,7 +213,7 @@ func TestWritableAsync(t *testing.T) {
 		value int
 	}
 	ts := new(testStruct)
-	s := NewWritable(ts)
+	s := store.NewWritable(ts)
 	val := 0
 	wg.Add(1)
 	unsub := s.Subscribe(func(ts *testStruct) {
