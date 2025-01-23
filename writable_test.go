@@ -4,7 +4,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/mbaklor/go-store"
+	"github.com/mbaklor/go-stores"
 	"github.com/stretchr/testify/assert"
 )
 

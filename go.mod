@@ -1,4 +1,4 @@
-module github.com/mbaklor/go-store
+module github.com/mbaklor/go-stores
 
 go 1.23.2
 

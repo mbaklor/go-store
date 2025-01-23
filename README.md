@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mbaklor/go-store"
+	"github.com/mbaklor/go-stores"
 )
 
 func main() {
